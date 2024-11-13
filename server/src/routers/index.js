@@ -6,9 +6,11 @@ const Response = require("../utils/response")
 
 const auth = require("../app/auth/router")
 const user = require("../app/users/router")
+const excel = require("../app/process-excel/router")
 
 router.use(auth)
 router.use(user)
+router.use(excel)
 
 
 router.post("/upload", function(req,res){
