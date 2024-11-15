@@ -33,38 +33,37 @@ router.post('/process-excel', upload.single('file'), (req, res) => {
     const baseCodeCounts = {};
 
     data.forEach((row) => {
-      const productCode = row["Ürün Kodu"];
+      const originalProductCode = row["Ürün Kodu"];
 
       // Base code'u çıkar
-      const baseCode = extractBaseCode(productCode);
+      const baseProductCode = extractBaseProductCode(originalProductCode);
 
-      // Base code için sayaç oluştur veya artır
-      if (!baseCodeCounts[baseCode]) {
-        baseCodeCounts[baseCode] = 1;
+       // Base code için sayaç oluştur veya artır
+       if (!baseCodeCounts[baseProductCode]) {
+        baseCodeCounts[baseProductCode] = 1;
       } else {
-        baseCodeCounts[baseCode] += 1;
+        baseCodeCounts[baseProductCode] += 1;
       }
 
-      const variantNumber = baseCodeCounts[baseCode];
+      const variantNumber = baseCodeCounts[baseProductCode];
 
       const isFirstVariant = variantNumber === 1;
 
       // Ürün Kodu'nun sonunda varsa ekstra tireyi kaldır
-      const cleanedProductCode = productCode.replace(/-$/, '');
+      const variantProductCode = `${baseProductCode}-${variantNumber}`;
 
       // Veri nesnesini oluşturun
       const dataObject = {
         "Kategori No": row["Kategori No"],
         "Kategori Açıklama": row["Kategori Açıklama"],
         "Ürün Adı": row["Ürün Adı"],
-        "Ürün Kodu": row["Ürün Kodu"],
+        "Ürün Kodu": baseProductCode, // Tek ürün kodu
         "Marka": row["Marka"],
-        "Varyant - Ürün Kodu": `${cleanedProductCode}-${variantNumber}`,
-        "Varyant - Boyut": row["Boyut/Ebat"],
+        "Varyant - Ürün Kodu": variantProductCode,
+        "Varyant - Renk": row["Varyant - Renk"],
         "Ürün Stok Miktarı": "5",
         "Liste Fiyatı (Kdv Dahil)": row["Liste Fiyatı (Kdv Dahil)"],
-        "Goturc İndirimli Satış Fiyatı (Kdv Dahil)":
-          row["Goturc İndirimli Satış Fiyatı (Kdv Dahil)"],
+        "Goturc İndirimli Satış Fiyatı (Kdv Dahil)": row["Goturc İndirimli Satış Fiyatı (Kdv Dahil)"] || "",
         "Para Birimi": row["Para birimi"],
         "Görsel1": row["Görsel1"] || "",
         "Görsel2": row["Görsel2"] || "",
@@ -76,36 +75,44 @@ router.post('/process-excel', upload.single('file'), (req, res) => {
         "Görsel8": row["Görsel8"] || "",
         "Görsel9": row["Görsel9"] || "",
         "Ürün Açıklama": row["Ürün Açıklama"],
-        "Boyut/Ebat": "",
-        "Hazırlık Süresi": row["Hazırlık Süresi (Gün)"] || 1,
-        "Kargo Şablonu": row["Kargo Şablonu"] || "Yurtiçi",
+        "Beden": "",
+        "Garanti Süresi": "",
+        "Materyal": "",
+        "Uyumlu Marka": "",
+        "Hazırlık Süresi": row["Hazırlık Süresi (Gün)"] || 2,
+        "Kargo Şablonu": row["Kargo Şablonu"] || "Piyasa Sepeti",
       };
 
-      // Eğer bu ürünün ilk varyantıysa, ek alanları ekleyin
-      if (isFirstVariant) {
-        dataObject["Çerçeve Tipi"] = row["Çerçeve Tipi"] || "";
-        dataObject["Materyal"] = row["Materyal"] || "";
-        dataObject["Parça Sayısı"] = row["Parça Sayısı"] || "";
-        dataObject["Tema / Stil"] = row["Tema / Stil"] || "";
-      }
+      // // Eğer bu ürünün ilk varyantıysa, ek alanları ekleyin
+      // if (isFirstVariant) {
+      //   dataObject["Çerçeve Tipi"] = row["Çerçeve Tipi"] || "";
+      //   dataObject["Materyal"] = row["Materyal"] || "";
+      //   dataObject["Parça Sayısı"] = row["Parça Sayısı"] || "";
+      //   dataObject["Tema / Stil"] = row["Tema / Stil"] || "";
+      // }
 
       processedData.push(dataObject);
+
+      console.log(`Orijinal Ürün Kodu: ${originalProductCode}, Base Product Code: ${baseProductCode}, Varyant No: ${variantNumber}`);
+
     });
 
-    // Base code'u çıkarmak için fonksiyon
-    function extractBaseCode(productCode) {
-      const regex = /([A-Z]+\d+)-?$/;
+    // Base product code'u çıkarmak için fonksiyon
+    function extractBaseProductCode(productCode) {
+      // Güncellenmiş regex ile boyut bilgisini eşleştir ve kaldır
+      const regex = /^(.*?)[0-9]+x[0-9]+(.*?)-?$/;
       const match = productCode.match(regex);
       if (match) {
-        return match[1];
+        return `${match[1]}${match[2]}`.replace(/-$/, '');
       } else {
-        return productCode;
+        // Eşleşme yoksa orijinal ürün kodundan sonundaki '-' işaretini kaldır
+        return productCode.replace(/-$/, '');
       }
     }
 
     // Çıktı dizinini ve yolunu belirleyin
     const outputDir = path.join(__dirname, '../../excels');
-    const outputPath = path.join(outputDir, 'deneme53.xlsx');
+    const outputPath = path.join(outputDir, 'deneme14.xlsx');
 
     // Çıktı dizini yoksa oluşturun
     if (!fs.existsSync(outputDir)) {
